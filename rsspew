@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Copying and distribution of this file, with or without modification, are
+# permitted in any medium without royalty provided the copyright notice and this
+# notice are preserved. This file is offered as-is, without any warranty.
+
+# Program used to open URLs. Other suggestions are "firefox", "x-www-browser",
+# "lynx", "echo", "wget"...
+reader="xdg-open"
+config_dir="${HOME}/.rsspew"
+
+# Send a message to stderr and exit
+fail () {
+    echo "$@" >&2
+    exit 1
+}
+
+# Get a sorted list of item URLs from a RSS feed
+get_items () {
+    ${curl} "$@" | grep -zo -e '<guid[^<>]*>[^<>]*</guid>'\
+                        -e '<link[^<>]*>[^<>]*</link>'\
+                        -e '<link[^<>]*href="[^"]*"' | cat |
+        grep -o 'http[^<>"]*' | sort | uniq
+}
+
+# Send a message to stderr
+notice () {
+    echo "$@" >&2
+}
+
+# Update a database of a feed and open new URLs
+read_items () {
+    cd read_urls
+    feed_file="$(echo "$1" | tr -d /)"
+    feed_temp_file="$(mktemp "${feed_file}.tmp.XXXXXXXXXX")"
+    feed_new_items="$(mktemp "${feed_file}.new.XXXXXXXXXX")"
+    get_items "$1" > "${feed_temp_file}"
+    if [ ! -s "${feed_temp_file}" ]; then
+        notice "No items found for $1."
+        rm "${feed_temp_file}"
+    elif [ ! -f "${feed_file}" ]; then
+        notice "$1 is a new feed. All items will be marked as read."
+        mv "${feed_temp_file}" "${feed_file}"
+    else
+        sort -o "${feed_file}" "${feed_file}"
+        comm -2 -3 "${feed_temp_file}" "${feed_file}" | tee "${feed_new_items}"
+        cat "${feed_new_items}" >> "${feed_file}"
+        sort -o "${feed_file}" "${feed_file}"
+        rm "${feed_temp_file}" "${feed_new_items}"
+    fi | while read item; do
+        notice "Opening ${item}."
+        "${reader}" "${item}" &
+    done
+}
+
+if type curl 2>&1 > /dev/null; then
+    curl="curl -s"
+elif type wget 2>&1 > /dev/null; then
+    curl="wget -qO -"
+else
+    fail "Either curl or wget is needed to run this script."
+fi
+
+if [ ! -d "${config_dir}/read_urls" ]; then
+    notice "Creating configuration directory."
+    mkdir -p "${config_dir}/read_urls"
+fi
+
+cd "${config_dir}"
+
+if [ ! -f "feeds" ]; then
+    fail "To use this script, put a list of feed URLs in '${config_dir}/feeds'."
+fi
+
+while read feed_url; do
+    read_items "${feed_url}" &
+done < "${config_dir}/feeds"
+
+wait

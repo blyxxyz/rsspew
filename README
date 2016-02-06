@@ -1,0 +1,9 @@
+rsspew keeps track of URLs in RSS feeds and opens new ones, possibly spewing browser tabs all over the place.
+
+Every time you run it, it fetches the content of the RSS feeds listed in ~/.rsspew/feeds, looks for item URLs, and compares them to a list of known URLs. New URLs are opened and added to the list.
+
+The program used to open URLs can be set at the top of the script. By default, xdg-open is used, which uses the default web browser on many systems.
+
+rsspew is written in POSIX sh, and has been tested with dash and bash.
+
+The script doesn't really understand XML, and searches for things that look like item links. It might open things that aren't real links, and it might miss real links.
