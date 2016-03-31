@@ -37,10 +37,11 @@ read_items () {
     get_items "$1" > "${feed_temp_file}"
     if [ ! -s "${feed_temp_file}" ]; then
         notice "No items found for $1."
-        rm "${feed_temp_file}"
+        rm "${feed_temp_file}" "${feed_new_items}"
     elif [ ! -f "${feed_file}" ]; then
         notice "$1 is a new feed. All items will be marked as read."
         mv "${feed_temp_file}" "${feed_file}"
+        rm "${feed_new_items}"
     else
         sort -o "${feed_file}" "${feed_file}"
         comm -2 -3 "${feed_temp_file}" "${feed_file}" | tee "${feed_new_items}"
