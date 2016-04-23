@@ -17,10 +17,10 @@ fail () {
 
 # Get a sorted list of item URLs from a RSS feed
 get_items () {
-    ${curl} "$@" | grep -zo -e '<guid[^<>]*>[^<>]*</guid>'\
+    ${curl} "$@" | grep ${text_only} -zo -e '<guid[^<>]*>[^<>]*</guid>'\
                         -e '<link[^<>]*>[^<>]*</link>'\
-                        -e '<link[^<>]*href="[^"]*"' | cat |
-        grep -o 'http[^<>"]*' | sort | uniq
+                        -e '<link[^<>]*href="[^"]*"' |
+        grep ${text_only} -o 'http[^<>"]*' | sort | uniq
 }
 
 # Send a message to stderr
@@ -54,12 +54,17 @@ read_items () {
     done
 }
 
-if type curl 2>&1 > /dev/null; then
-    curl="curl -s"
-elif type wget 2>&1 > /dev/null; then
+if type wget 2>&1 > /dev/null; then
     curl="wget -qO -"
+elif type curl 2>&1 > /dev/null; then
+    curl="curl -s"
 else
     fail "Either curl or wget is needed to run this script."
+fi
+
+# Detect GNU grep so we can force it to treat everything as text
+if < /dev/null grep --help 2>&1 | grep -q -- -a; then
+    text_only="-a"
 fi
 
 if [ ! -d "${config_dir}/read_urls" ]; then
