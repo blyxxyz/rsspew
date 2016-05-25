@@ -50,14 +50,14 @@ read_items () {
         rm "${feed_temp_file}" "${feed_new_items}"
     fi | while read item; do
         notice "Opening ${item}."
-        "${reader}" "${item}" &
+        ${reader} "${item}" &
     done
 }
 
-if type wget 2>&1 > /dev/null; then
+if curl --version >&-; then
+    curl="curl -sL"
+elif wget --version >&-; then
     curl="wget -qO -"
-elif type curl 2>&1 > /dev/null; then
-    curl="curl -s"
 else
     fail "Either curl or wget is needed to run this script."
 fi
